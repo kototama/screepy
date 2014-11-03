@@ -6,5 +6,7 @@ import qualified Screepy.Auth as Auth
 main :: IO ()
 main = do
   config <- loadConfig "screepy.yaml"
-  let bToken = Auth.createBearerTokenCredentials (authKey config) (authSecret config)
-  putStr $ show bToken
+  let creds = Auth.createBearerTokenCredentials (authKey config) (authSecret config)
+  putStr $ show creds
+  token <- Auth.getBearerToken creds
+  putStr $ show token
