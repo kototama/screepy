@@ -1,12 +1,14 @@
 module Screepy.Main (main) where
 
-import Screepy.Config (loadConfig, Config(..))
-import qualified Screepy.Auth as Auth
+import qualified Data.ByteString.Lazy.Char8  as C
+import qualified Screepy.Auth         as Auth
+import           Screepy.Config       (Config (..), loadConfig)
 
 main :: IO ()
 main = do
   config <- loadConfig "screepy.yaml"
-  let creds = Auth.createBearerTokenCredentials (authKey config) (authSecret config)
-  putStr $ show creds
-  token <- Auth.getBearerToken creds
+  let k = C.pack (authKey config)
+      s = C.pack (authSecret config)
+      creds = Auth.createBearerTokenCredentials k s
+  token <- Auth.getBearerToken "https://api.twitter.com/oauth2/token" creds
   putStr $ show token

@@ -4,27 +4,37 @@ module Screepy.Auth (createBearerTokenCredentials,
                      getBearerToken
                     ) where
 
-import qualified Network.HTTP.Base as Http
-import qualified Codec.Binary.Base64.String as B64
-import Network.Wreq
-import Network.Wreq.Lens
-import Control.Lens
-import Data.ByteString.Lazy as L
+import           Control.Lens
+import qualified Data.ByteString.Base64.Lazy as B64
+import qualified Data.ByteString.Lazy        as B
+import qualified Data.ByteString.Lazy.Char8  as C
+import qualified Network.HTTP.Base           as Http
+import           Network.Wreq
+import           Network.Wreq.Lens
 
 newtype BearerTokenCredentials =
-  BearerTokenCredentials { getCredentials :: String } deriving Show
+  BearerTokenCredentials { getCredentials :: B.ByteString } deriving Show
 
-createBearerTokenCredentials :: String -> String -> BearerTokenCredentials
+createBearerTokenCredentials :: B.ByteString -> B.ByteString -> BearerTokenCredentials
 createBearerTokenCredentials key secret =
-  let k = Http.urlEncode key
-      s = Http.urlEncode secret
-  in
-   BearerTokenCredentials $ B64.encode $ k ++ ":" ++ s
+  let k = C.pack $ Http.urlEncode (C.unpack key)
+      s = C.pack $ Http.urlEncode (C.unpack secret)
+   in
+   BearerTokenCredentials $ B64.encode (B.concat [k, ":", s])
 
-getBearerToken :: BearerTokenCredentials -> IO String
-getBearerToken bearerTokenCredentials = do
-   r <- get "https://google.com"
-   case r ^? responseBody of
-     Just body -> L.putStr body
-     _ -> L.putStr "no body"
-   return "win"
+getBearerToken :: String -> BearerTokenCredentials -> IO String
+getBearerToken url bearerTokenCredentials = do
+  let creds = getCredentials bearerTokenCredentials
+      authContent = B.toStrict $ B.concat ["Basic ", creds]
+      opts = defaults
+             & header "Authorization" .~ [authContent]
+             & header "Content-Type" .~ ["application/x-www-form-urlencoded;charset=UTF-8"]
+  putStr $ "creds ="
+  B.putStr creds
+  putStr $ show opts
+  putStr "\n\n"
+  r <- postWith opts url ["grant_type" := ("client_credentials" :: B.ByteString)]
+  case r ^? responseBody of
+    Just body -> B.putStr body
+    _ -> B.putStr "no body"
+  return "win"
