@@ -1,6 +1,7 @@
 module Screepy.Main (main) where
 
 import qualified Data.ByteString.Char8  as C
+import qualified Data.ByteString        as B
 import qualified Screepy.Auth         as Auth
 import           Screepy.Config       (Config (..), loadConfig)
 
@@ -11,4 +12,7 @@ main = do
       s = C.pack (authSecret config)
       creds = Auth.createBearerTokenCredentials k s
   token <- Auth.getBearerToken "https://api.twitter.com/oauth2/token" creds
-  putStr $ show token
+  case token of
+    Left err -> do
+      B.putStr err
+    Right val -> B.putStr $ Auth.getToken val
