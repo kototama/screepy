@@ -2,8 +2,7 @@
 
 module Screepy.Auth (createBearerTokenCredentials,
                      getBearerToken,
-                     BearerToken,
-                     getToken)
+                     BearerToken(..))
        where
 
 import           Control.Lens
