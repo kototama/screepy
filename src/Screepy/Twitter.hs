@@ -7,7 +7,7 @@ import Screepy.Auth (BearerToken, getToken)
 import           Network.Wreq
 import           Network.Wreq.Lens
 import           Control.Lens
-import Data.Aeson.Lens (key, nth, _String)
+import Data.Aeson.Lens (key, nth, _String, _Array, _Object, values)
 import Data.Maybe (fromJust)
 
 import qualified Data.Text as T
@@ -20,9 +20,9 @@ getPictures bearerToken = do
   let opts = defaults
              & auth .~ (oauth2Bearer $ getToken bearerToken)
              & param "screen_name" .~ ["nasa"]
-             & param "count" .~ ["2"]
+             & param "count" .~ ["10"]
   r <- getWith opts "https://api.twitter.com/1.1/statuses/user_timeline.json"
   -- BL.putStr $ r ^. responseBody
-  let v = fromJust $ r ^? responseBody . nth 0 . key "extended_entities" . key "media" . nth 0 . key "media_url_https" . _String
-  putStr . T.unpack $ v
+  let v = r ^.. responseBody . values . key "extended_entities" . key "media" . values . key "media_url" . _String
+  putStr . show $ v
   return ()
