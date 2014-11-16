@@ -17,5 +17,5 @@ main = do
     Left err -> do
       B.putStr err
     Right token -> do
-      B.putStr $ Auth.getToken token
+--      B.putStr $ Auth.getToken token
       T.getPictures token
