@@ -17,6 +17,6 @@ main = do
   case tk of
     Left err -> do
       putStr $ show err
-    Right token -> B.putStrLn $ Auth.getToken token
----      B.putStr $ Auth.getToken token
---       T.getPictures token
+    Right token -> do
+      C.putStrLn $ Auth.getToken token
+      T.getPictures token
