@@ -23,6 +23,6 @@ getPictures bearerToken = do
              & param "count" .~ ["10"]
   r <- getWith opts "https://api.twitter.com/1.1/statuses/user_timeline.json"
   -- BL.putStr $ r ^. responseBody
-  let v = r ^.. responseBody . values . key "extended_entities" . key "media" . values . key "media_url" . _String
+  let v = r ^.. responseBody . values . key "extended_entities" . key "media" . values . key "media_url_https" . _String
   putStr . show $ v
   return ()
