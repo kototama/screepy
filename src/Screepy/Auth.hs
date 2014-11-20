@@ -8,7 +8,7 @@ module Screepy.Auth (createBearerTokenCredentials,
 import           Control.Exception          as E
 import           Control.Lens
 import           Control.Monad.Except
-import           Data.Aeson                 (encode)
+import           Data.Aeson                 (fromJSON, Result(..))
 import qualified Data.Aeson.Lens            as L
 import qualified Data.ByteString            as B
 import qualified Data.ByteString.Base64     as B64
@@ -25,7 +25,7 @@ newtype BearerTokenCredentials =
 
 newtype BearerToken = BearerToken { getToken :: B.ByteString } deriving Show
 
-data AuthError = HttpError String | InvalidCredentials deriving Show
+data AuthError = HttpError String | InvalidCredentials | InvalidJSON String deriving Show
 
 createBearerTokenCredentials :: B.ByteString -> B.ByteString -> BearerTokenCredentials
 createBearerTokenCredentials key secret =
@@ -59,7 +59,9 @@ getRespBody url bearerTokenCredentials = do
 parseRespBody :: Response BL.ByteString -> Either AuthError B.ByteString
 parseRespBody body = do
   tokenV <- maybeToEither InvalidCredentials $ body ^? responseBody . L.key "access_token"
-  return $ BL.toStrict $ encode tokenV
+  case (fromJSON tokenV :: Result String) of
+    Success v -> return . C.pack $ v
+    Error err -> Left $ InvalidJSON err
 
 getBearerToken :: String -> BearerTokenCredentials -> ExceptT AuthError IO BearerToken
 getBearerToken url bearerTokenCredentials = do
