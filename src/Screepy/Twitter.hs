@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Screepy.Twitter (TwitterConf(..),
-                        getPictures,
+                        getPhotos,
                         doRequest)
        where
 
@@ -24,8 +24,14 @@ doRequest conf segment getparams = do
       opts = foldl (\o p  -> o & param (fst p) .~ [(snd p)]) defaultOpts getparams
   getWith opts url
     where url = (baseUrl conf) ++ segment
-  
-getPictures :: TwitterConf -> Params -> IO [Text]
-getPictures conf reqparams = do
+
+getPhotos :: TwitterConf -> Params -> IO [Text]
+getPhotos conf reqparams = do
   r <- doRequest conf "statuses/user_timeline.json" reqparams
-  return $ r ^.. responseBody . values . key "extended_entities" . key "media" . values . key "media_url_https" . _String
+  return $ r ^.. responseBody
+    . values
+    . key "extended_entities"
+    . key "media"
+    . values
+    . filtered (elemOf (key "type") "photo")
+    . key "media_url_https" . _String

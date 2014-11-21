@@ -10,7 +10,6 @@ import Control.Monad.Except(runExceptT)
 import qualified Data.Text.IO as T
 
 
-
 main :: IO ()
 main = do
   config <- loadConfig "screepy.yaml"
@@ -25,6 +24,5 @@ main = do
     Right token -> do
       let conf = TW.TwitterConf { TW.baseUrl = baseUrlV,
                                   TW.token = token}
-
-      pictures <- TW.getPictures conf [("screen_name", "nasa"), ("count", "10")]
+      pictures <- TW.getPhotos conf [("screen_name", "nasa"), ("count", "10")]
       mapM_ T.putStrLn $ pictures
