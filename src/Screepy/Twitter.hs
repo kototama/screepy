@@ -22,8 +22,8 @@ doRequest conf segment getparams = do
   let defaultOpts = defaults
              & auth .~ (oauth2Bearer . getToken . token $ conf)
       opts = foldl (\o p  -> o & param (fst p) .~ [(snd p)]) defaultOpts getparams
+      url = (baseUrl conf) ++ segment
   getWith opts url
-    where url = (baseUrl conf) ++ segment
 
 getPhotos :: TwitterConf -> Params -> IO [Text]
 getPhotos conf reqparams = do
