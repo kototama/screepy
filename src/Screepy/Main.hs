@@ -1,11 +1,11 @@
 module Screepy.Main (main) where
 
 import qualified Data.ByteString.Char8  as C
-import qualified Data.ByteString        as B
 import qualified Screepy.Auth         as Auth
 import           Screepy.Config       (Config (..), loadConfig)
-import qualified Screepy.Twitter as T
+import qualified Screepy.Twitter as Twitter
 import Control.Monad.Except(runExceptT)
+import qualified Data.Text.IO as T
 
 main :: IO ()
 main = do
@@ -18,5 +18,5 @@ main = do
     Left err -> do
       putStr $ show err
     Right token -> do
-      C.putStrLn $ Auth.getToken token
-      T.getPictures token
+      pictures <- Twitter.getPictures token
+      mapM_ T.putStrLn $ pictures
