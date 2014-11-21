@@ -16,7 +16,7 @@ type Params = [(Text,Text)]
 data TwitterConf = TwitterConf { token :: BearerToken,
                                  baseUrl :: String
                                } deriving Show
-  
+
 doRequest :: TwitterConf -> String -> Params -> IO (Response BL.ByteString)
 doRequest conf segment getparams = do
   let defaultOpts = defaults
@@ -33,5 +33,5 @@ getPhotos conf reqparams = do
     . key "extended_entities"
     . key "media"
     . values
-    . filtered (elemOf (key "type") "photo")
+    . filtered (elemOf (key "type"._String) "photo")
     . key "media_url_https" . _String
