@@ -62,7 +62,7 @@ parseRespBody body = do
   tokenV <- maybeToEither InvalidCredentials $ body ^? responseBody . L.key "access_token"
   case (fromJSON tokenV :: Result String) of
     Success v -> return . C.pack $ v
-    Error err -> throwError $ InvalidJSON err
+    Error err -> Left $ InvalidJSON err
 
 getBearerToken :: String -> BearerTokenCredentials -> ExceptT AuthError IO BearerToken
 getBearerToken url bearerTokenCredentials = do
