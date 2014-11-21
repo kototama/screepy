@@ -3,3 +3,5 @@
 auth:
   key: xvz1evFS4wEEPTGEFPHBog
   secret: L8qq9PZyRg6ieKGEKhZolGC0vJWLw8iEJ88DRdyOg
+api:
+  baseUrl: https://api.twitter.com/1.1/

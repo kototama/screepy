@@ -5,7 +5,8 @@ module Screepy.Config (loadConfig, Config(..)) where
 import qualified Data.Yaml.Config as C
 
 data Config = Config { authKey :: String,
-                       authSecret :: String
+                       authSecret :: String,
+                       baseUrl :: String                       
                      } deriving Show
 
 loadConfig :: String -> IO Config 
@@ -14,6 +15,9 @@ loadConfig pathname = do
   auth <- C.subconfig "auth" config
   authKeyVal <- C.lookup "key" auth
   authSecretVal <- C.lookup "secret" auth
+  api <- C.subconfig "api" config
+  baseUrlVal <- C.lookup "baseUrl" api
   return Config { authKey = authKeyVal,
-                  authSecret = authSecretVal }
+                  authSecret = authSecretVal,
+                  baseUrl = baseUrlVal}
   
