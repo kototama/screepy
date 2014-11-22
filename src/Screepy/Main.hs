@@ -26,9 +26,9 @@ main = do
     Right token -> do
       let conf = TwitterConf { TW.baseUrl = baseUrlV,
                                token = token}
-      photosResp <- getPhotos conf [("screen_name", "nasa"), ("count", "10")]
+      photosResp <- getPhotos conf [("screen_name", "nasa"), ("count", "1")]
       photosResp2 <- getPhotos conf [("screen_name", "nasa"),
-                                     ("count", "10"),
-                                     ("max_id", T.pack . show . oldestTweetId $ photosResp)]
+                                     ("count", "2"),
+                                     ("max_id", T.pack . show . pred . oldestTweetId $ photosResp)]
       putStrLn . show . photosUrls $ photosResp
       putStrLn . show . photosUrls $ photosResp2
