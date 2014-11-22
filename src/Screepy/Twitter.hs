@@ -2,7 +2,7 @@
 
 module Screepy.Twitter (TwitterConf(..),
                         getPhotos,
-                        doRequest)
+                        doGetReq)
        where
 
 import Screepy.Auth (BearerToken, getToken)
@@ -17,17 +17,17 @@ data TwitterConf = TwitterConf { token :: BearerToken,
                                  baseUrl :: String
                                } deriving Show
 
-doRequest :: TwitterConf -> String -> Params -> IO (Response BL.ByteString)
-doRequest conf segment getparams = do
+doGetReq :: TwitterConf -> String -> Params -> IO (Response BL.ByteString)
+doGetReq conf segment getparams = do
   let defaultOpts = defaults
              & auth .~ (oauth2Bearer . getToken . token $ conf)
-      opts = foldl (\o p  -> o & param (fst p) .~ [(snd p)]) defaultOpts getparams
+      opts = foldl (\o p  -> o & param (fst p) .~ [snd p]) defaultOpts getparams
       url = (baseUrl conf) ++ segment
   getWith opts url
 
 getPhotos :: TwitterConf -> Params -> IO [Text]
 getPhotos conf reqparams = do
-  r <- doRequest conf "statuses/user_timeline.json" reqparams
+  r <- doGetReq conf "statuses/user_timeline.json" reqparams
   return $ r ^.. responseBody
     . values
     . key "extended_entities"
