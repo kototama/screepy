@@ -20,9 +20,9 @@ data TwitterConf = TwitterConf { token   :: BearerToken
 
 data PhotosResp =
   PhotosResp { newestTweetId :: Integer
-               -- ^ the id of the newest visited Tweet regardless of it containing a photo or not
+               -- ^ the id of the newest requested Tweet (containing a photo or not)
              , oldestTweetId :: Integer
-               -- ^ the id of the oldest Tweet visited regardless of it containing a photo or not
+               -- ^ the id of the oldest request Tweet (containing a photo or not)
              , photosUrls    :: [Text]
                -- ^ the URLs of the photos
              } deriving Show
@@ -40,7 +40,7 @@ getPhotos conf reqparams = do
   r <- doGetReq conf "statuses/user_timeline.json" reqparams
 
   let ids = r ^.. responseBody . values . key "id" . _Integer
-      newestId = head ids
+      newestId = head ids -- what if there are no tweets at all?
       oldestId = last ids
       urls = r ^.. responseBody
                . values
