@@ -1,21 +1,31 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Screepy.Twitter (TwitterConf(..),
-                        getPhotos,
-                        doGetReq)
-       where
+module Screepy.Twitter
+       (  TwitterConf(..)
+        , PhotosResp(..)
+        , getPhotos
+        , doGetReq) where
 
-import Screepy.Auth (BearerToken, getToken)
-import           Network.Wreq
 import           Control.Lens
-import Data.Aeson.Lens (key, _String, values)
-import Data.Text(Text)
-import qualified Data.ByteString.Lazy       as BL
+import           Data.Aeson.Lens      (key, nth, values, _Integer, _String)
+import qualified Data.ByteString.Lazy as BL
+import           Data.Text            (Text)
+import           Network.Wreq
+import           Screepy.Auth         (BearerToken, getToken)
 type Params = [(Text,Text)]
 
-data TwitterConf = TwitterConf { token :: BearerToken,
-                                 baseUrl :: String
+data TwitterConf = TwitterConf { token   :: BearerToken
+                               , baseUrl :: String
                                } deriving Show
+
+data PhotosResp =
+  PhotosResp { newestTweetId :: Integer
+               -- ^ the id of the newest visited Tweet regardless of it containing a photo or not
+             , oldestTweetId  :: Integer
+               -- ^ the id of the oldest Tweet visited regardless of it containing a photo or not
+             , photosUrls   :: [Text]
+               -- ^ the URLs of the photos
+             } deriving Show
 
 doGetReq :: TwitterConf -> String -> Params -> IO (Response BL.ByteString)
 doGetReq conf segment getparams = do
@@ -25,13 +35,22 @@ doGetReq conf segment getparams = do
       url = (baseUrl conf) ++ segment
   getWith opts url
 
-getPhotos :: TwitterConf -> Params -> IO [Text]
+getPhotos :: TwitterConf -> Params -> IO PhotosResp
 getPhotos conf reqparams = do
   r <- doGetReq conf "statuses/user_timeline.json" reqparams
-  return $ r ^.. responseBody
-    . values
-    . key "extended_entities"
-    . key "media"
-    . values
-    . filtered (elemOf (key "type"._String) "photo")
-    . key "media_url_https" . _String
+
+  let ids = r ^.. responseBody . values . key "id" . _Integer
+      newestId = head ids
+      oldestId = last ids
+      urls = r ^.. responseBody
+               . values
+               . key "extended_entities"
+               . key "media"
+               . values
+               . filtered (elemOf (key "type"._String) "photo")
+               . key "media_url_https" . _String
+
+  return $ PhotosResp { newestTweetId = newestId,
+                        oldestTweetId = oldestId,
+                        photosUrls = urls
+                      }
