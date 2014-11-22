@@ -21,9 +21,9 @@ data TwitterConf = TwitterConf { token   :: BearerToken
 data PhotosResp =
   PhotosResp { newestTweetId :: Integer
                -- ^ the id of the newest visited Tweet regardless of it containing a photo or not
-             , oldestTweetId  :: Integer
+             , oldestTweetId :: Integer
                -- ^ the id of the oldest Tweet visited regardless of it containing a photo or not
-             , photosUrls   :: [Text]
+             , photosUrls    :: [Text]
                -- ^ the URLs of the photos
              } deriving Show
 
@@ -50,7 +50,7 @@ getPhotos conf reqparams = do
                . filtered (elemOf (key "type"._String) "photo")
                . key "media_url_https" . _String
 
-  return $ PhotosResp { newestTweetId = newestId,
-                        oldestTweetId = oldestId,
-                        photosUrls = urls
+  return $ PhotosResp { newestTweetId = newestId
+                      , oldestTweetId = oldestId
+                      , photosUrls = urls
                       }
