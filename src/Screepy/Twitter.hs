@@ -1,11 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+-- |
+-- Interaction with the timeline.
 module Screepy.Twitter
        (  TwitterConf(..)
         , PhotosResp(..)
         , getPhotos
-        , doGetReq
-        , getMaximumOfPhotos) where
+        , getMaximumOfPhotos
+        , Params(..)
+        , TwitterError(..)) where
 
 import           Control.Exception   (try)
 import           Control.Monad.Except
@@ -18,21 +21,26 @@ import           Network.Wreq
 import           Screepy.Auth         (BearerToken, getToken)
 import Screepy.Http (httpErrorToMsg)
 
+-- | A list of parameter to pass to the Twitter API calls
 type Params = [(Text,Text)]
 
+-- | Configuration passed to the functions of this module. Necessary
+-- to authenticate with the Twitter API.
 data TwitterConf = TwitterConf { token   :: BearerToken
                                , baseUrl :: String
                                } deriving Show
 
+-- | Store the Photos URLs contained in a timeline
 data PhotosResp =
   PhotosResp { newestTweetId :: Integer
-               -- ^ the id of the newest requested Tweet (containing a photo or not)
+               -- ^ id of the newest requested Tweet (containing a photo or not)
              , oldestTweetId :: Integer
-               -- ^ the id of the oldest request Tweet (containing a photo or not)
+               -- ^ id of the oldest request Tweet (containing a photo or not)
              , photosUrls    :: [Text]
-               -- ^ the URLs of the photos
+               -- ^ URLs of the photos
              } deriving Show
 
+-- | Represent errors than can occurs during a call
 data TwitterError = NoTweet | NoMoreTweet PhotosResp | HttpError String deriving Show
 
 doGetReq :: TwitterConf -> String -> Params -> IO (Response BL.ByteString)
@@ -50,6 +58,7 @@ liftReq req = do
     Right x -> return x
     Left e -> throwError $ HttpError . httpErrorToMsg $ e
 
+-- | Filter the photos URLs in the timeline, respecting the query parameters
 getPhotos :: TwitterConf -> Params -> ExceptT TwitterError IO PhotosResp
 getPhotos conf reqparams = do
   r <- liftReq $ doGetReq conf "statuses/user_timeline.json" reqparams
@@ -85,8 +94,9 @@ getMaximumOfPhotos' conf prevResp accumulator = do
     getMaximumOfPhotos' conf resp PhotosResp { newestTweetId = newestTweetId accumulator
                                              , oldestTweetId = oldestTweetId resp
                                              , photosUrls =  (photosUrls accumulator) ++ (photosUrls resp)
-                                             } 
-                   
+                                             }
+      
+-- | Attempt to fetch the maximum number of photos URLs in the timeline                   
 getMaximumOfPhotos :: TwitterConf -> Params -> ExceptT TwitterError IO PhotosResp
 getMaximumOfPhotos conf reqparams = do
   resp <- getPhotos conf reqparams
