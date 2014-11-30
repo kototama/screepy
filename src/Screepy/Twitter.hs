@@ -7,13 +7,13 @@ module Screepy.Twitter
         , PhotosResp(..)
         , getPhotos
         , getMaximumOfPhotos
-        , Params(..)
+        , Params
         , TwitterError(..)) where
 
 import           Control.Exception   (try)
 import           Control.Monad.Except
 import           Control.Lens
-import           Data.Aeson.Lens      (key, nth, values, _Integer, _String)
+import           Data.Aeson.Lens      (key, values, _Integer, _String)
 import qualified Data.ByteString.Lazy as BL
 import           Data.Text            (Text)
 import qualified Data.Text as T
