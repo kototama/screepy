@@ -28,16 +28,18 @@ main = do
       photosResp <- runExceptT $ getPhotos conf [("screen_name", "nasa"), ("count", "1")]
       case photosResp of
         Right resp -> do
-          photosResp2 <- runExceptT $getMaximumOfPhotos conf [("screen_name", "nasa"),
-                                                              ("count", "50"),
-                                                              ("max_id", T.pack . show . pred . oldestTweetId $ resp)] 
+          photosResp2 <- runExceptT $ getMaximumOfPhotos conf [("screen_name", "nasa"),
+                                                               ("count", "50"),
+                                                               ("max_id", T.pack . show . pred . oldestTweetId $ resp)] 
             
-          putStrLn . show $ photosResp
+
           -- photosResp2 <- runExceptT $ getPhotos conf [("screen_name", "nasa"),
           --                                             ("count", "50"),
           --                                             ("max_id", T.pack . show . pred . oldestTweetId $ resp)]
           case photosResp2 of
                Right resp2 -> do
-                 mapM_ (putStrLn . show) resp2
+                 putStrLn . show . length . photosUrls $ resp2
+                 let diff = (newestTweetId resp2) - (oldestTweetId resp2)
+                 putStrLn $ "diff =" ++  (show diff) 
                Left _ -> putStr "error"
         Left _ -> putStr "error"

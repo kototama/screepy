@@ -33,7 +33,7 @@ data PhotosResp =
                -- ^ the URLs of the photos
              } deriving Show
 
-data TwitterError = NoTweet | NoMoreTweet [PhotosResp] | HttpError String deriving Show
+data TwitterError = NoTweet | NoMoreTweet PhotosResp | HttpError String deriving Show
 
 doGetReq :: TwitterConf -> String -> Params -> IO (Response BL.ByteString)
 doGetReq conf segment getparams = do
@@ -70,27 +70,29 @@ getPhotos conf reqparams = do
                                   , photosUrls = urls
                                   }
 
-getMaximumOfPhotos' :: TwitterConf -> PhotosResp -> [PhotosResp] -> ExceptT TwitterError IO [PhotosResp]
-getMaximumOfPhotos' conf prevResp resps = do
+getMaximumOfPhotos' :: TwitterConf -> PhotosResp -> PhotosResp -> ExceptT TwitterError IO PhotosResp
+getMaximumOfPhotos' conf prevResp accumulator = do
     let maxId = T.pack . show . pred . oldestTweetId $ prevResp
         reqparams = [("screen_name", "nasa"),
                      ("max_id", maxId),
                      ("count", "200")]
     resp <- getPhotos conf reqparams `catchError` (\e -> case e of
-                                                      NoTweet -> do                                                      
+                                                      NoTweet -> do
                                                          liftIO . putStrLn $ "no tweet"
-                                                         throwError $ NoMoreTweet resps
+                                                         throwError $ NoMoreTweet accumulator
                                                       _ -> throwError e)
 
-    liftIO . putStrLn . show . photosUrls $ resp
-    getMaximumOfPhotos' conf resp (resp : resps)
+    getMaximumOfPhotos' conf resp PhotosResp { newestTweetId = newestTweetId accumulator
+                                             , oldestTweetId = oldestTweetId resp
+                                             , photosUrls =  (photosUrls accumulator) ++ (photosUrls resp)
+                                             } 
                    
-getMaximumOfPhotos :: TwitterConf -> Params -> ExceptT TwitterError IO [PhotosResp]
+getMaximumOfPhotos :: TwitterConf -> Params -> ExceptT TwitterError IO PhotosResp
 getMaximumOfPhotos conf reqparams = do
   resp <- getPhotos conf reqparams
-  getMaximumOfPhotos' conf resp [resp] `catchError` (\e -> case e of
-                                                        NoMoreTweet actuals ->
+  getMaximumOfPhotos' conf resp resp `catchError` (\e -> case e of
+                                                        NoMoreTweet actual ->
                                                           do
                                                             liftIO . putStrLn $ "no more tweet"
-                                                            return actuals
+                                                            return actual
                                                         _ -> throwError e)
