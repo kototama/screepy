@@ -1,10 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Screepy.Auth (createBearerTokenCredentials,
-                     getBearerToken,
-                     BearerToken(..),
-                     AuthError(..))
-       where
+module Screepy.Auth ( createBearerTokenCredentials
+                    , getBearerToken
+                    , BearerToken(..)
+                    , AuthError(..)) where
 
 import           Control.Exception          as E
 import           Control.Lens
@@ -20,6 +19,7 @@ import qualified Network.HTTP.Base          as Http
 import qualified Network.HTTP.Client        as HC
 import           Network.Wreq
 import           Network.Wreq.Lens
+import Screepy.Http (httpErrorToMsg)
 
 newtype BearerTokenCredentials =
   BearerTokenCredentials { getCredentials :: B.ByteString } deriving Show
@@ -35,14 +35,6 @@ createBearerTokenCredentials key secret =
    in
    BearerTokenCredentials $ B64.encode (B.concat [k, ":", s])
 
-httpErrorToMsg :: HC.HttpException -> String
-httpErrorToMsg (HC.StatusCodeException s _ _) =
-  C.unpack $ B.concat [s ^. statusMessage,
-                       " (error ",
-                       C.pack . show $ s ^. statusCode,
-                       ")"]
-httpErrorToMsg e = show e
-  
 liftReq :: IO (Response BL.ByteString) -> ExceptT AuthError IO (Response BL.ByteString)
 liftReq req = do
   r <- liftIO $ E.try req
