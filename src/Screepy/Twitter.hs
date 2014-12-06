@@ -26,6 +26,8 @@ import           Screepy.Auth         (BearerToken, getToken)
 import           Screepy.Http         (httpErrorToMsg)
 
 -- | A list of parameter to pass to the Twitter API calls
+-- 
+-- Parameters are describe at <https://dev.twitter.com/rest/reference/get/statuses/user_timeline>
 type Params = [(Text,Text)]
 
 -- | Configuration passed to the functions of this module. Necessary
@@ -62,7 +64,13 @@ liftReq req = do
     Right x -> return x
     Left e -> throwError $ HttpError . httpErrorToMsg $ e
 
--- | Filter the photos URLs in the timeline, respecting the query parameters
+-- | Get the photos URLs in the timeline.
+-- 
+-- Example:
+--    
+-- @
+-- getPhotos conf [(\"screen_name\", \"nasa\"), (\"count\", \"10\")]
+-- @
 getPhotos :: TwitterConf -> Params -> ExceptT TwitterError IO PhotosResp
 getPhotos conf reqparams = do
   r <- liftReq $ doGetReq conf "statuses/user_timeline.json" reqparams
@@ -94,14 +102,14 @@ fetchAllPhotos' conf params accumulator = do
                 _ -> throwError e)
 
     fetchAllPhotos' conf params PhotosResp { newestTweetId = newestTweetId accumulator
-                                               , oldestTweetId = oldestTweetId resp
-                                               , photosUrls =  (photosUrls accumulator) ++ (photosUrls resp)
-                                               }
+                                           , oldestTweetId = oldestTweetId resp
+                                           , photosUrls =  (photosUrls accumulator) ++ (photosUrls resp)
+                                           }
 
 -- | Attempt to fetch the maximum number of photos URLs in the
 -- timeline. Due to the constraints of the Twitter API a maximum
--- number of 3200 most-recent Tweets can be explored for photos. A
--- rate of 300 request per 15-min window is applied.
+-- number of 3200 most-recent Tweets can be explored. A rate of 300
+-- request per 15-min window is applied.
 -- 
 -- Example:
 -- 
