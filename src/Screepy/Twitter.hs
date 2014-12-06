@@ -10,18 +10,20 @@ module Screepy.Twitter
         , Params
         , TwitterError(..)) where
 
-import           Control.Exception   (try)
-import           Control.Monad.Except
+import           Control.Exception    (try)
 import           Control.Lens
+import           Control.Monad.Except
 import           Data.Aeson.Lens      (key, values, _Integer, _String)
 import qualified Data.ByteString.Lazy as BL
+import           Data.Function        (on)
+import           Data.List            (unionBy)
 import           Data.Text            (Text)
-import qualified Data.Text as T
-import           Network.Wreq (getWith, defaults, auth, oauth2Bearer, param, Response)
-import           Network.Wreq.Lens (responseBody)
+import qualified Data.Text            as T
+import           Network.Wreq         (Response, auth, defaults, getWith,
+                                       oauth2Bearer, param)
+import           Network.Wreq.Lens    (responseBody)
 import           Screepy.Auth         (BearerToken, getToken)
-import Screepy.Http (httpErrorToMsg)
-import Data.List (union)
+import           Screepy.Http         (httpErrorToMsg)
 
 -- | A list of parameter to pass to the Twitter API calls
 type Params = [(Text,Text)]
@@ -84,7 +86,7 @@ getPhotos conf reqparams = do
 getMaximumOfPhotos' :: TwitterConf -> Params -> PhotosResp -> PhotosResp -> ExceptT TwitterError IO PhotosResp
 getMaximumOfPhotos' conf params prevResp accumulator = do
     let maxId = T.pack . show . pred . oldestTweetId $ prevResp
-        reqparams = [("max_id", maxId)] `union` params
+        reqparams = unionBy ((==) `on` fst) [("max_id", maxId)] params
     resp <- getPhotos conf reqparams
             `catchError`
             (\e -> case e of
@@ -95,8 +97,8 @@ getMaximumOfPhotos' conf params prevResp accumulator = do
                                                     , oldestTweetId = oldestTweetId resp
                                                     , photosUrls =  (photosUrls accumulator) ++ (photosUrls resp)
                                                     }
-      
--- | Attempt to fetch the maximum number of photos URLs in the timeline                   
+
+-- | Attempt to fetch the maximum number of photos URLs in the timeline
 getMaximumOfPhotos :: TwitterConf -> Params -> ExceptT TwitterError IO PhotosResp
 getMaximumOfPhotos conf reqparams = do
   resp <- getPhotos conf reqparams
