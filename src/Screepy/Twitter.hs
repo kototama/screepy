@@ -25,7 +25,7 @@ import           Network.Wreq.Lens    (responseBody)
 import           Screepy.Auth         (BearerToken, getToken)
 import           Screepy.Http         (httpErrorToMsg)
 
--- | A list of parameter to pass to the Twitter API calls
+-- | A list of parameter to pass to the Twitter API calls.
 -- 
 -- Parameters are describe at <https://dev.twitter.com/rest/reference/get/statuses/user_timeline>
 type Params = [(Text,Text)]
@@ -41,12 +41,12 @@ data PhotosResp =
   PhotosResp { newestTweetId :: Integer
                -- ^ id of the newest requested Tweet (containing a photo or not)
              , oldestTweetId :: Integer
-               -- ^ id of the oldest request Tweet (containing a photo or not)
+               -- ^ id of the oldest requested Tweet (containing a photo or not)
              , photosUrls    :: [Text]
                -- ^ URLs of the photos
              } deriving Show
 
--- | Represent errors than can occurs during a call
+-- | Represent errors than can occurs during a call.
 data TwitterError = NoTweet | NoMoreTweet PhotosResp | HttpError String deriving Show
 
 doGetReq :: TwitterConf -> String -> Params -> IO (Response BL.ByteString)
