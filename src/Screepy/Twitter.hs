@@ -1,12 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 -- |
--- Interaction with the timeline.
+-- High-level queries for the user timeline.
 module Screepy.Twitter
        (  TwitterConf(..)
         , PhotosResp(..)
         , getPhotos
-        , getMaximumOfPhotos
+        , fetchAllPhotos
         , Params
         , TwitterError(..)) where
 
@@ -83,8 +83,8 @@ getPhotos conf reqparams = do
                                   , photosUrls = urls
                                   }
 
-getMaximumOfPhotos' :: TwitterConf -> Params -> PhotosResp -> ExceptT TwitterError IO PhotosResp
-getMaximumOfPhotos' conf params accumulator = do
+fetchAllPhotos' :: TwitterConf -> Params -> PhotosResp -> ExceptT TwitterError IO PhotosResp
+fetchAllPhotos' conf params accumulator = do
     let maxId = T.pack . show . pred . oldestTweetId $ accumulator
         reqparams = unionBy ((==) `on` fst) [("max_id", maxId)] params
     resp <- getPhotos conf reqparams
@@ -93,16 +93,25 @@ getMaximumOfPhotos' conf params accumulator = do
                 NoTweet -> throwError $ NoMoreTweet accumulator
                 _ -> throwError e)
 
-    getMaximumOfPhotos' conf params PhotosResp { newestTweetId = newestTweetId accumulator
+    fetchAllPhotos' conf params PhotosResp { newestTweetId = newestTweetId accumulator
                                                , oldestTweetId = oldestTweetId resp
                                                , photosUrls =  (photosUrls accumulator) ++ (photosUrls resp)
                                                }
 
--- | Attempt to fetch the maximum number of photos URLs in the timeline
-getMaximumOfPhotos :: TwitterConf -> Params -> ExceptT TwitterError IO PhotosResp
-getMaximumOfPhotos conf reqparams = do
+-- | Attempt to fetch the maximum number of photos URLs in the
+-- timeline. Due to the constraints of the Twitter API a maximum
+-- number of 3200 most-recent Tweets can be explored for photos. A
+-- rate of 300 request per 15-min window is applied.
+-- 
+-- Example:
+-- 
+-- @
+-- fetchAllPhotos conf [(\"screen_name\", \"nasa\"), (\"count\", \"200\")]
+-- @
+fetchAllPhotos :: TwitterConf -> Params -> ExceptT TwitterError IO PhotosResp
+fetchAllPhotos conf reqparams = do
   resp <- getPhotos conf reqparams
-  getMaximumOfPhotos' conf reqparams resp
+  fetchAllPhotos' conf reqparams resp
     `catchError`
     (\e -> case e of
         NoMoreTweet actual -> return actual
