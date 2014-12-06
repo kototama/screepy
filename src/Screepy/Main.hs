@@ -25,21 +25,15 @@ main = do
     Right tok -> do
       let conf = TwitterConf { TW.baseUrl = baseUrlV,
                                token = tok}
-      photosResp <- runExceptT $ getPhotos conf [("screen_name", "nasa"), ("count", "1")]
+      photosResp <- runExceptT $ getPhotos conf [("screen_name", "nasa"), ("count", "10")]
       case photosResp of
         Right resp -> do
-          photosResp2 <- runExceptT $ fetchAllPhotos conf [ ("screen_name", "nasa")
-                                                          -- , ("max_id", T.pack . show . pred . oldestTweetId $ resp)
-                                                          , ("count", "200")
-                                                          ]
-
+          -- photosResp2 <- runExceptT $ fetchAllPhotos conf [ ("screen_name", "nasa")
+          --                                                 -- , ("max_id", T.pack . show . pred . oldestTweetId $ resp)
+          --                                                 , ("count", "200")
+          --                                                 ]
+          putStrLn . show $ resp
           -- photosResp2 <- runExceptT $ getPhotos conf [("screen_name", "nasa"),
           --                                             ("count", "50"),
           --                                             ("max_id", T.pack . show . pred . oldestTweetId $ resp)]
-          case photosResp2 of
-               Right resp2 -> do
-                 putStrLn . show . length . photosUrls $ resp2
-                 let diff = (newestTweetId resp2) - (oldestTweetId resp2)
-                 putStrLn $ "diff =" ++  (show diff) 
-               Left _ -> putStr "error"
         Left _ -> putStr "error"
