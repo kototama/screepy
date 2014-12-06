@@ -83,9 +83,9 @@ getPhotos conf reqparams = do
                                   , photosUrls = urls
                                   }
 
-getMaximumOfPhotos' :: TwitterConf -> Params -> PhotosResp -> PhotosResp -> ExceptT TwitterError IO PhotosResp
-getMaximumOfPhotos' conf params prevResp accumulator = do
-    let maxId = T.pack . show . pred . oldestTweetId $ prevResp
+getMaximumOfPhotos' :: TwitterConf -> Params -> PhotosResp -> ExceptT TwitterError IO PhotosResp
+getMaximumOfPhotos' conf params accumulator = do
+    let maxId = T.pack . show . pred . oldestTweetId $ accumulator
         reqparams = unionBy ((==) `on` fst) [("max_id", maxId)] params
     resp <- getPhotos conf reqparams
             `catchError`
@@ -93,16 +93,16 @@ getMaximumOfPhotos' conf params prevResp accumulator = do
                 NoTweet -> throwError $ NoMoreTweet accumulator
                 _ -> throwError e)
 
-    getMaximumOfPhotos' conf params resp PhotosResp { newestTweetId = newestTweetId accumulator
-                                                    , oldestTweetId = oldestTweetId resp
-                                                    , photosUrls =  (photosUrls accumulator) ++ (photosUrls resp)
-                                                    }
+    getMaximumOfPhotos' conf params PhotosResp { newestTweetId = newestTweetId accumulator
+                                               , oldestTweetId = oldestTweetId resp
+                                               , photosUrls =  (photosUrls accumulator) ++ (photosUrls resp)
+                                               }
 
 -- | Attempt to fetch the maximum number of photos URLs in the timeline
 getMaximumOfPhotos :: TwitterConf -> Params -> ExceptT TwitterError IO PhotosResp
 getMaximumOfPhotos conf reqparams = do
   resp <- getPhotos conf reqparams
-  getMaximumOfPhotos' conf reqparams resp resp
+  getMaximumOfPhotos' conf reqparams resp
     `catchError`
     (\e -> case e of
         NoMoreTweet actual -> return actual
