@@ -29,7 +29,6 @@ main = do
       case photosResp of
         Right resp -> do
           photosResp2 <- runExceptT $ getMaximumOfPhotos conf [("screen_name", "nasa"),
-                                                               ("count", "50"),
                                                                ("max_id", T.pack . show . pred . oldestTweetId $ resp)] 
             
 

@@ -17,9 +17,11 @@ import           Data.Aeson.Lens      (key, values, _Integer, _String)
 import qualified Data.ByteString.Lazy as BL
 import           Data.Text            (Text)
 import qualified Data.Text as T
-import           Network.Wreq
+import           Network.Wreq (getWith, defaults, auth, oauth2Bearer, param, Response)
+import           Network.Wreq.Lens (responseBody)
 import           Screepy.Auth         (BearerToken, getToken)
 import Screepy.Http (httpErrorToMsg)
+import Data.List (union)
 
 -- | A list of parameter to pass to the Twitter API calls
 type Params = [(Text,Text)]
@@ -79,30 +81,27 @@ getPhotos conf reqparams = do
                                   , photosUrls = urls
                                   }
 
-getMaximumOfPhotos' :: TwitterConf -> PhotosResp -> PhotosResp -> ExceptT TwitterError IO PhotosResp
-getMaximumOfPhotos' conf prevResp accumulator = do
+getMaximumOfPhotos' :: TwitterConf -> Params -> PhotosResp -> PhotosResp -> ExceptT TwitterError IO PhotosResp
+getMaximumOfPhotos' conf params prevResp accumulator = do
     let maxId = T.pack . show . pred . oldestTweetId $ prevResp
-        reqparams = [("screen_name", "nasa"),
-                     ("max_id", maxId),
-                     ("count", "200")]
-    resp <- getPhotos conf reqparams `catchError` (\e -> case e of
-                                                      NoTweet -> do
-                                                         liftIO . putStrLn $ "no tweet"
-                                                         throwError $ NoMoreTweet accumulator
-                                                      _ -> throwError e)
+        reqparams = [("max_id", maxId)] `union` params
+    resp <- getPhotos conf reqparams
+            `catchError`
+            (\e -> case e of
+                NoTweet -> throwError $ NoMoreTweet accumulator
+                _ -> throwError e)
 
-    getMaximumOfPhotos' conf resp PhotosResp { newestTweetId = newestTweetId accumulator
-                                             , oldestTweetId = oldestTweetId resp
-                                             , photosUrls =  (photosUrls accumulator) ++ (photosUrls resp)
-                                             }
+    getMaximumOfPhotos' conf params resp PhotosResp { newestTweetId = newestTweetId accumulator
+                                                    , oldestTweetId = oldestTweetId resp
+                                                    , photosUrls =  (photosUrls accumulator) ++ (photosUrls resp)
+                                                    }
       
 -- | Attempt to fetch the maximum number of photos URLs in the timeline                   
 getMaximumOfPhotos :: TwitterConf -> Params -> ExceptT TwitterError IO PhotosResp
 getMaximumOfPhotos conf reqparams = do
   resp <- getPhotos conf reqparams
-  getMaximumOfPhotos' conf resp resp `catchError` (\e -> case e of
-                                                        NoMoreTweet actual ->
-                                                          do
-                                                            liftIO . putStrLn $ "no more tweet"
-                                                            return actual
-                                                        _ -> throwError e)
+  getMaximumOfPhotos' conf reqparams resp resp
+    `catchError`
+    (\e -> case e of
+        NoMoreTweet actual -> return actual
+        _ -> throwError e)
