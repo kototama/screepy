@@ -8,7 +8,7 @@ module Screepy.Twitter
         , getPhotos
         , fetchAllPhotos
         , Params
-        , TwitterError(..)) where
+        , TwitterError(NoTweet, HttpError)) where
 
 import           Control.Exception    (try)
 import           Control.Lens
