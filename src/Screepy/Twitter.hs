@@ -42,7 +42,7 @@ data PhotosResp =
                -- ^ id of the newest requested Tweet (containing a photo or not)
              , oldestTweetId :: Integer
                -- ^ id of the oldest requested Tweet (containing a photo or not)
-             , photosUrls    :: [Text]
+             , photosUrls    :: [String]
                -- ^ URLs of the photos
              } deriving Show
 
@@ -88,7 +88,7 @@ getPhotos conf reqparams = do
                        . key "media_url_https" . _String in
               return PhotosResp { newestTweetId = newestId
                                 , oldestTweetId = oldestId
-                                , photosUrls = urls
+                                , photosUrls = map T.unpack urls
                                 }
 
 fetchAllPhotos' :: TwitterConf -> Params -> PhotosResp -> ExceptT TwitterError IO PhotosResp
