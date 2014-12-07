@@ -5,8 +5,8 @@
 module Screepy.Twitter
        (  TwitterConf(..)
         , PhotosResp(..)
-        , getPhotos
-        , fetchAllPhotos
+        , getPhotosUrls
+        , fetchAllPhotosUrls
         , Params
         , TwitterError(NoTweet, HttpError)) where
 
@@ -71,8 +71,8 @@ liftReq req = do
 -- @
 -- getPhotos conf [(\"screen_name\", \"nasa\"), (\"count\", \"10\")]
 -- @
-getPhotos :: TwitterConf -> Params -> ExceptT TwitterError IO PhotosResp
-getPhotos conf reqparams = do
+getPhotosUrls :: TwitterConf -> Params -> ExceptT TwitterError IO PhotosResp
+getPhotosUrls conf reqparams = do
   r <- liftReq $ doGetReq conf "statuses/user_timeline.json" reqparams
   let ids = r ^.. responseBody . values . key "id" . _Integer
   if null ids
@@ -91,17 +91,17 @@ getPhotos conf reqparams = do
                                 , photosUrls = map T.unpack urls
                                 }
 
-fetchAllPhotos' :: TwitterConf -> Params -> PhotosResp -> ExceptT TwitterError IO PhotosResp
-fetchAllPhotos' conf params accumulator = do
+fetchAllPhotosUrls' :: TwitterConf -> Params -> PhotosResp -> ExceptT TwitterError IO PhotosResp
+fetchAllPhotosUrls' conf params accumulator = do
     let maxId = T.pack . show . pred . oldestTweetId $ accumulator
         reqparams = unionBy ((==) `on` fst) [("max_id", maxId)] params
-    resp <- getPhotos conf reqparams
+    resp <- getPhotosUrls conf reqparams
             `catchError`
             (\e -> case e of
                 NoTweet -> throwError $ NoMoreTweet accumulator
                 _ -> throwError e)
 
-    fetchAllPhotos' conf params PhotosResp { newestTweetId = newestTweetId accumulator
+    fetchAllPhotosUrls' conf params PhotosResp { newestTweetId = newestTweetId accumulator
                                            , oldestTweetId = oldestTweetId resp
                                            , photosUrls =  photosUrls accumulator ++ photosUrls resp
                                            }
@@ -116,10 +116,10 @@ fetchAllPhotos' conf params accumulator = do
 -- @
 -- fetchAllPhotos conf [(\"screen_name\", \"nasa\"), (\"count\", \"200\")]
 -- @
-fetchAllPhotos :: TwitterConf -> Params -> ExceptT TwitterError IO PhotosResp
-fetchAllPhotos conf reqparams = do
-  resp <- getPhotos conf reqparams
-  fetchAllPhotos' conf reqparams resp
+fetchAllPhotosUrls :: TwitterConf -> Params -> ExceptT TwitterError IO PhotosResp
+fetchAllPhotosUrls conf reqparams = do
+  resp <- getPhotosUrls conf reqparams
+  fetchAllPhotosUrls' conf reqparams resp
     `catchError`
     (\e -> case e of
         NoMoreTweet actual -> return actual
