@@ -54,7 +54,7 @@ doGetReq conf segment getparams = do
   let defaultOpts = defaults
              & auth .~ (oauth2Bearer . getToken . token $ conf)
       opts = foldl (\o p  -> o & param (fst p) .~ [snd p]) defaultOpts getparams
-      url = (baseUrl conf) ++ segment
+      url = baseUrl conf ++ segment
   getWith opts url
 
 liftReq :: IO (Response BL.ByteString) -> ExceptT TwitterError IO (Response BL.ByteString)
@@ -77,19 +77,19 @@ getPhotos conf reqparams = do
   let ids = r ^.. responseBody . values . key "id" . _Integer
   if null ids
     then throwError NoTweet
-    else do let newestId = head ids
-                oldestId = last ids
-                urls = r ^.. responseBody
+    else let newestId = head ids
+             oldestId = last ids
+             urls = r ^.. responseBody
                        . values
                        . key "extended_entities"
                        . key "media"
                        . values
                        . filtered (elemOf (key "type"._String) "photo")
                        . key "media_url_https" . _String in
-              return $ PhotosResp { newestTweetId = newestId
-                                  , oldestTweetId = oldestId
-                                  , photosUrls = urls
-                                  }
+              return PhotosResp { newestTweetId = newestId
+                                , oldestTweetId = oldestId
+                                , photosUrls = urls
+                                }
 
 fetchAllPhotos' :: TwitterConf -> Params -> PhotosResp -> ExceptT TwitterError IO PhotosResp
 fetchAllPhotos' conf params accumulator = do
@@ -103,7 +103,7 @@ fetchAllPhotos' conf params accumulator = do
 
     fetchAllPhotos' conf params PhotosResp { newestTweetId = newestTweetId accumulator
                                            , oldestTweetId = oldestTweetId resp
-                                           , photosUrls =  (photosUrls accumulator) ++ (photosUrls resp)
+                                           , photosUrls =  photosUrls accumulator ++ photosUrls resp
                                            }
 
 -- | Attempt to fetch the maximum number of photos URLs in the
