@@ -2,17 +2,35 @@
 
 module Screepy.Main (main) where
 
-import           Control.Monad.Except  (runExceptT)
-import qualified Data.ByteString.Char8 as C
-import qualified Data.ByteString.Lazy as BL
-import qualified Data.Text             as T
-import qualified Screepy.Auth          as Auth
-import           Screepy.Config        (Config (..), loadConfig)
-import qualified Screepy.Config        as CO
+import           Control.Monad.Except         (runExceptT)
+import           Control.Monad.Trans.Resource (MonadResource, runResourceT, ResourceT)
+import qualified Data.ByteString.Char8        as C
+import qualified Data.ByteString.Lazy         as BL
+import           Data.Conduit
+import qualified Data.Conduit.Binary          as CB
+import qualified Data.Conduit.List            as CL
+import           Data.List.Split              (splitOn)
+import qualified Screepy.Auth                 as Auth
+import           Screepy.Config               (Config (..), loadConfig)
+import qualified Screepy.Config               as CO
+import           Screepy.Fetcher
+import           Screepy.Photo
 import           Screepy.Twitter
-import qualified Screepy.Twitter       as TW
-import Screepy.Photo
-import Screepy.Fetcher
+import qualified Screepy.Twitter              as TW
+
+mkFilePath :: Photo -> FilePath
+mkFilePath photo = last $ splitOn "/" (url photo)
+
+sinkPhotos :: Sink Photo (ResourceT IO) ()
+sinkPhotos = do
+    mphoto <- await
+    case mphoto of
+        Nothing -> return ()
+        Just photo -> do
+          yield ct =$ CB.sinkFile fp
+          sinkPhotos
+          where fp = mkFilePath photo
+                ct = BL.toStrict $ content photo
 
 main :: IO ()
 main = do
@@ -36,13 +54,14 @@ main = do
           --                                                 , ("count", "200")
           --                                                 ]
           putStrLn . show $ resp
-          let firstPhoto = head . photosUrls $ resp
-          resp2 <- runExceptT $ fetchPhoto firstPhoto
+          -- let firstPhoto = head . photosUrls $ resp
+          -- resp2 <- runExceptT $ fetchPhoto firstPhoto
+          -- case resp2 of
+          --   Right photo -> BL.writeFile "/tmp/photo1.png" (content photo)
+          --   Left _ -> putStr "error"
+          resp2 <- runExceptT . fetchPhotos $ photosUrls resp
           case resp2 of
-            Right photo -> BL.writeFile "/tmp/photo1.png" (content photo)
-            Left _ -> putStr "error"              
-              
-          -- photosResp2 <- runExceptT $ getPhotos conf [("screen_name", "nasa"),
-          --                                             ("count", "50"),
-          --                                             ("max_id", T.pack . show . pred . oldestTweetId $ resp)]
+            Right photos -> runResourceT $ CL.sourceList photos $$ sinkPhotos
+            Left _ -> error "error"
+
         Left _ -> putStr "error"

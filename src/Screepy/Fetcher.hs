@@ -2,6 +2,7 @@
 
 module Screepy.Fetcher
        ( fetchPhoto
+       , fetchPhotos
        , FetcherError(..)) where
 
 import qualified Data.ByteString.Lazy as BL
@@ -27,3 +28,6 @@ fetchPhoto u = do
     r <- liftReq . get $ u
     return Photo { content = r ^. responseBody
                  , url = u}
+
+fetchPhotos :: [String] -> ExceptT FetcherError IO [Photo]
+fetchPhotos urls = mapM fetchPhoto urls
