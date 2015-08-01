@@ -2,8 +2,8 @@
 
 module Screepy.Main (main) where
 
-import           Control.Monad.Except         (runExceptT)
-import           Control.Monad.Trans.Resource (MonadResource, runResourceT, ResourceT)
+import           Control.Monad.Error        (runErrorT)
+import           Control.Monad.Trans.Resource (runResourceT, ResourceT)
 import qualified Data.ByteString.Char8        as C
 import qualified Data.ByteString.Lazy         as BL
 import           Data.Conduit
@@ -34,32 +34,32 @@ sinkPhotos = do
 
 main :: IO ()
 main = do
-  config <- loadConfig "screepy.yaml"
+  config <- loadConfig "screepy.cfg"
   let k = C.pack (authKey config)
       s = C.pack (authSecret config)
       creds = Auth.createBearerTokenCredentials k s
       baseUrlV = (CO.baseUrl config)
-  tk <- runExceptT $ Auth.getBearerToken "https://api.twitter.com/oauth2/token" creds
+  tk <- runErrorT $ Auth.getBearerToken "https://api.twitter.com/oauth2/token" creds
   case tk of
     Left err -> do
       putStr $ show err
     Right tok -> do
       let conf = TwitterConf { TW.baseUrl = baseUrlV,
                                token = tok}
-      photosResp <- runExceptT $ getPhotosUrls conf [("screen_name", "nasa"), ("count", "10")]
+      photosResp <- runErrorT $ getPhotosUrls conf [("screen_name", "nasa"), ("count", "100")]
       case photosResp of
         Right resp -> do
-          -- photosResp2 <- runExceptT $ fetchAllPhotos conf [ ("screen_name", "nasa")
+          -- photosResp2 <- runErrorT $ fetchAllPhotos conf [ ("screen_name", "nasa")
           --                                                 -- , ("max_id", T.pack . show . pred . oldestTweetId $ resp)
           --                                                 , ("count", "200")
           --                                                 ]
           putStrLn . show $ resp
           -- let firstPhoto = head . photosUrls $ resp
-          -- resp2 <- runExceptT $ fetchPhoto firstPhoto
+          -- resp2 <- runErrorT $ fetchPhoto firstPhoto
           -- case resp2 of
           --   Right photo -> BL.writeFile "/tmp/photo1.png" (content photo)
           --   Left _ -> putStr "error"
-          resp2 <- runExceptT . fetchPhotos $ photosUrls resp
+          resp2 <- runErrorT . fetchPhotos $ photosUrls resp
           case resp2 of
             Right photos -> runResourceT $ CL.sourceList photos $$ sinkPhotos
             Left _ -> error "error"

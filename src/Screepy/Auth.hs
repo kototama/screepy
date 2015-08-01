@@ -7,7 +7,7 @@ module Screepy.Auth ( createBearerTokenCredentials
 
 import           Control.Exception          as E
 import           Control.Lens
-import           Control.Monad.Except
+import           Control.Monad.Error
 import           Data.Aeson                 (fromJSON, Result(..))
 import qualified Data.Aeson.Lens            as L
 import qualified Data.ByteString            as B
@@ -16,9 +16,7 @@ import qualified Data.ByteString.Char8      as C
 import qualified Data.ByteString.Lazy       as BL
 import           Data.Either.Utils          (maybeToEither)
 import qualified Network.HTTP.Base          as Http
-import qualified Network.HTTP.Client        as HC
 import           Network.Wreq
-import           Network.Wreq.Lens
 import Screepy.Http (httpErrorToMsg)
 
 newtype BearerTokenCredentials =
@@ -28,6 +26,10 @@ newtype BearerToken = BearerToken { getToken :: B.ByteString } deriving Show
 
 data AuthError = HttpError String | InvalidCredentials | InvalidJSON String deriving Show
 
+instance Error AuthError where
+  noMsg    = HttpError "Authentification error!"
+  strMsg s = HttpError s
+
 createBearerTokenCredentials :: B.ByteString -> B.ByteString -> BearerTokenCredentials
 createBearerTokenCredentials key secret =
   let k = C.pack $ Http.urlEncode (C.unpack key)
@@ -35,14 +37,14 @@ createBearerTokenCredentials key secret =
    in
    BearerTokenCredentials $ B64.encode (B.concat [k, ":", s])
 
-liftReq :: IO (Response BL.ByteString) -> ExceptT AuthError IO (Response BL.ByteString)
+liftReq :: IO (Response BL.ByteString) -> ErrorT AuthError IO (Response BL.ByteString)
 liftReq req = do
   r <- liftIO $ E.try req
   case r of
     Right x -> return x
     Left e -> throwError $ HttpError . httpErrorToMsg $ e
 
-getRespBody :: String -> BearerTokenCredentials -> ExceptT AuthError IO (Response BL.ByteString)
+getRespBody :: String -> BearerTokenCredentials -> ErrorT AuthError IO (Response BL.ByteString)
 getRespBody url bearerTokenCredentials = do
   let creds = getCredentials bearerTokenCredentials
       authContent = B.concat ["Basic ", creds]
@@ -56,8 +58,8 @@ parseRespBody body = do
     Success v -> return . C.pack $ v
     Error err -> Left $ InvalidJSON err
 
-getBearerToken :: String -> BearerTokenCredentials -> ExceptT AuthError IO BearerToken
+getBearerToken :: String -> BearerTokenCredentials -> ErrorT AuthError IO BearerToken
 getBearerToken url bearerTokenCredentials = do
   r <- getRespBody url bearerTokenCredentials
-  token <- ExceptT . return $ parseRespBody r
+  token <- ErrorT . return $ parseRespBody r
   return $ BearerToken token

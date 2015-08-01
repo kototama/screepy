@@ -1,0 +1,7 @@
+flags: {}
+packages:
+- '.'
+extra-deps: [
+ConfigFile-1.1.4,
+]
+resolver: lts-2.19

@@ -2,7 +2,8 @@
 
 module Screepy.Config (loadConfig, Config(..)) where
 
-import qualified Data.Yaml.Config as C
+import Data.ConfigFile
+import Data.Either.Utils (forceEither)
 
 data Config = Config { authKey :: String,
                        authSecret :: String,
@@ -11,13 +12,12 @@ data Config = Config { authKey :: String,
 
 loadConfig :: String -> IO Config 
 loadConfig pathname = do
-  config <- C.load pathname
-  auth <- C.subconfig "auth" config
-  authKeyVal <- C.lookup "key" auth
-  authSecretVal <- C.lookup "secret" auth
-  api <- C.subconfig "api" config
-  baseUrlVal <- C.lookup "baseUrl" api
-  return Config { authKey = authKeyVal,
-                  authSecret = authSecretVal,
-                  baseUrl = baseUrlVal}
+  val <- readfile emptyCP pathname
+  let cp = forceEither val
+  let key = forceEither $ get cp "api" "key"
+  let secret = forceEither $ get cp "api" "secret"
+  let url = forceEither $ get cp "api" "baseurl"
+  return Config { authKey = key,
+                  authSecret = secret,
+                  baseUrl = url}
   

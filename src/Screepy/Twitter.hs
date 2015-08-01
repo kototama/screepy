@@ -12,7 +12,7 @@ module Screepy.Twitter
 
 import           Control.Exception    (try)
 import           Control.Lens
-import           Control.Monad.Except
+import           Control.Monad.Error
 import           Data.Aeson.Lens      (key, values, _Integer, _String)
 import qualified Data.ByteString.Lazy as BL
 import           Data.Function        (on)
@@ -49,15 +49,20 @@ data PhotosResp =
 -- | Represent errors than can occurs during a call.
 data TwitterError = NoTweet | NoMoreTweet PhotosResp | HttpError String deriving Show
 
+instance Error TwitterError where
+  noMsg    = HttpError "Twitter error during fetch!"
+  strMsg s = HttpError s
+
 doGetReq :: TwitterConf -> String -> Params -> IO (Response BL.ByteString)
 doGetReq conf segment getparams = do
   let defaultOpts = defaults
-             & auth .~ (oauth2Bearer . getToken . token $ conf)
+  -- TODO see how to get rid of the Just constructor here
+             & auth .~ (Just (oauth2Bearer . getToken . token $ conf))
       opts = foldl (\o p  -> o & param (fst p) .~ [snd p]) defaultOpts getparams
       url = baseUrl conf ++ segment
   getWith opts url
 
-liftReq :: IO (Response BL.ByteString) -> ExceptT TwitterError IO (Response BL.ByteString)
+liftReq :: IO (Response BL.ByteString) -> ErrorT TwitterError IO (Response BL.ByteString)
 liftReq req = do
   r <- liftIO $ try req
   case r of
@@ -71,7 +76,7 @@ liftReq req = do
 -- @
 -- getPhotos conf [(\"screen_name\", \"nasa\"), (\"count\", \"10\")]
 -- @
-getPhotosUrls :: TwitterConf -> Params -> ExceptT TwitterError IO PhotosResp
+getPhotosUrls :: TwitterConf -> Params -> ErrorT TwitterError IO PhotosResp
 getPhotosUrls conf reqparams = do
   r <- liftReq $ doGetReq conf "statuses/user_timeline.json" reqparams
   let ids = r ^.. responseBody . values . key "id" . _Integer
@@ -91,7 +96,7 @@ getPhotosUrls conf reqparams = do
                                 , photosUrls = map T.unpack urls
                                 }
 
-fetchAllPhotosUrls' :: TwitterConf -> Params -> PhotosResp -> ExceptT TwitterError IO PhotosResp
+fetchAllPhotosUrls' :: TwitterConf -> Params -> PhotosResp -> ErrorT TwitterError IO PhotosResp
 fetchAllPhotosUrls' conf params accumulator = do
     let maxId = T.pack . show . pred . oldestTweetId $ accumulator
         reqparams = unionBy ((==) `on` fst) [("max_id", maxId)] params
@@ -116,7 +121,7 @@ fetchAllPhotosUrls' conf params accumulator = do
 -- @
 -- fetchAllPhotos conf [(\"screen_name\", \"nasa\"), (\"count\", \"200\")]
 -- @
-fetchAllPhotosUrls :: TwitterConf -> Params -> ExceptT TwitterError IO PhotosResp
+fetchAllPhotosUrls :: TwitterConf -> Params -> ErrorT TwitterError IO PhotosResp
 fetchAllPhotosUrls conf reqparams = do
   resp <- getPhotosUrls conf reqparams
   fetchAllPhotosUrls' conf reqparams resp

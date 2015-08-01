@@ -1,7 +1,10 @@
 # A kind of Twitter scrapper
 
+
 ## Build 
 
 ```
-    cabal build && ./dist/build/screepy/screepy
+    cp screepy.cfg.example screepy.cfg
+    vim screepy.cfg
+    stack build
 ```
