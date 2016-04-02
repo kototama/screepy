@@ -19,7 +19,10 @@ cabal-version:       >=1.10
 executable screepy
   main-is:             Main.hs
   other-modules:       Screepy.Main,
-                       Screepy.Config
+                       Screepy.Auth,
+                       Screepy.Config,
+                       Screepy.Dump,
+                       Screepy.Fetch
   build-depends:       base,
                        text,
                        bytestring,
