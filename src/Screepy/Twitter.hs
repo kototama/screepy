@@ -24,6 +24,10 @@ import           Network.Wreq         (Response, auth, defaults, getWith,
 import           Network.Wreq.Lens    (responseBody)
 import           Screepy.Auth         (BearerToken, getToken)
 import           Screepy.Http         (httpErrorToMsg)
+import           Data.Time.Clock      ()
+import           Data.Time.Format
+import           System.Locale
+import           Data.Time
 
 -- | A list of parameter to pass to the Twitter API calls.
 -- 
@@ -44,6 +48,8 @@ data PhotosResp =
                -- ^ id of the oldest requested Tweet (containing a photo or not)
              , photosUrls    :: [String]
                -- ^ URLs of the photos
+             , creationTimes :: [UTCTime]
+               -- ^ creation time
              } deriving Show
 
 -- | Represent errors than can occurs during a call.
@@ -79,6 +85,8 @@ liftReq req = do
 getPhotosUrls :: TwitterConf -> Params -> ErrorT TwitterError IO PhotosResp
 getPhotosUrls conf reqparams = do
   r <- liftReq $ doGetReq conf "statuses/user_timeline.json" reqparams
+  let times = r ^.. responseBody . values . key "created_at" . _String
+  liftIO . putStr . show $ times
   let ids = r ^.. responseBody . values . key "id" . _Integer
   if null ids
     then throwError NoTweet
@@ -90,11 +98,21 @@ getPhotosUrls conf reqparams = do
                        . key "media"
                        . values
                        . filtered (elemOf (key "type"._String) "photo")
-                       . key "media_url_https" . _String in
-              return PhotosResp { newestTweetId = newestId
-                                , oldestTweetId = oldestId
-                                , photosUrls = map T.unpack urls
-                                }
+                       . key "media_url_https" . _String
+             timesStrings = r ^.. responseBody
+                            . values
+                            . key "created_at" . _String in
+         return PhotosResp { newestTweetId = newestId
+                           , oldestTweetId = oldestId
+                           , photosUrls = map T.unpack urls
+                           , creationTimes = map (parseCreationTime . T.unpack) timesStrings
+                           }
+
+
+parseCreationTime :: String -> UTCTime
+parseCreationTime dateString =
+  readTime defaultTimeLocale "%a %b %d %T %z %Y" dateString :: UTCTime
+
 
 fetchAllPhotosUrls' :: TwitterConf -> Params -> PhotosResp -> ErrorT TwitterError IO PhotosResp
 fetchAllPhotosUrls' conf params accumulator = do
@@ -107,8 +125,9 @@ fetchAllPhotosUrls' conf params accumulator = do
                 _ -> throwError e)
 
     fetchAllPhotosUrls' conf params PhotosResp { newestTweetId = newestTweetId accumulator
-                                           , oldestTweetId = oldestTweetId resp
-                                           , photosUrls =  photosUrls accumulator ++ photosUrls resp
+                                               , oldestTweetId = oldestTweetId resp
+                                               , photosUrls =  photosUrls accumulator ++ photosUrls resp
+                                               , creationTimes =  creationTimes accumulator ++ creationTimes resp
                                            }
 
 -- | Attempt to fetch the maximum number of photos URLs in the

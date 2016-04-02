@@ -9,6 +9,7 @@ data Config = Config { authKey :: String
                      , authSecret :: String
                      , baseUrl :: String
                      , dumpDirectory :: FilePath
+                     , destination :: String
                      } deriving Show
 
 loadConfig :: String -> IO Config

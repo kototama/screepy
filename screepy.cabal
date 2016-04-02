@@ -39,7 +39,10 @@ executable screepy
                        conduit-extra,
                        resourcet,
                        split,
-                       ConfigFile
+                       ConfigFile,
+                       directory,
+                       time,
+                       old-locale
 
   -- hs-source-dirs:
   default-language:    Haskell2010

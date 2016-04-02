@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+
 module Screepy.Main (main) where
 
 import           Control.Monad.Error        (runErrorT)
@@ -19,6 +20,7 @@ main = do
       s = C.pack (authSecret config)
       creds = Auth.createBearerTokenCredentials k s
       baseUrlV = (CO.baseUrl config)
+      directory = (CO.dumpDirectory config)
   tk <- runErrorT $ Auth.getBearerToken "https://api.twitter.com/oauth2/token" creds
   case tk of
     Left err -> do
@@ -29,14 +31,9 @@ main = do
       photosResp <- runErrorT $ getPhotosUrls conf [("screen_name", "nasa"), ("count", "50")]
       case photosResp of
         Right resp -> do
-          -- photosResp2 <- runErrorT $ fetchAllPhotos conf [ ("screen_name", "nasa")
-          --                                                 -- , ("max_id", T.pack . show . pred . oldestTweetId $ resp)
-          --                                                 , ("count", "200")
-          --                                                 ]
           putStrLn . show $ resp
           resp2 <- runErrorT . fetchPhotos $ photosUrls resp
           case resp2 of
-            Right photos -> dumpPhotos photos
+            Right photos -> dumpPhotos photos directory
             Left _ -> error "error"
-
         Left _ -> putStr "error"

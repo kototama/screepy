@@ -17,20 +17,21 @@ instance Error DumpError where
   strMsg s = HttpError s
 
 
-mkFilePath :: Photo -> FilePath
-mkFilePath photo = last $ splitOn "/" (url photo)
+mkFilePath :: Photo -> FilePath -> FilePath
+mkFilePath photo directory = directory ++ "/" ++ photoName
+  where photoName = last $ splitOn "/" (url photo)
 
-sinkPhotos :: Sink Photo (ResourceT IO) ()
-sinkPhotos = do
+sinkPhotos :: FilePath -> Sink Photo (ResourceT IO) ()
+sinkPhotos directory = do
     mphoto <- await
     case mphoto of
         Nothing -> return ()
         Just photo -> do
           yield ct =$ CB.sinkFile fp
-          sinkPhotos
-          where fp = mkFilePath photo
+          sinkPhotos directory
+          where fp = mkFilePath photo directory
                 ct = BL.toStrict $ content photo
 
-dumpPhotos :: [Photo] -> IO ()
-dumpPhotos photos =
-  runResourceT $ CL.sourceList photos $$ sinkPhotos
+dumpPhotos :: [Photo] -> FilePath -> IO ()
+dumpPhotos photos directory =
+  runResourceT $ CL.sourceList photos $$ (sinkPhotos directory)
