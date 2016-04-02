@@ -13,7 +13,7 @@ import           Data.List.Split              (splitOn)
 import qualified Screepy.Auth                 as Auth
 import           Screepy.Config               (Config (..), loadConfig)
 import qualified Screepy.Config               as CO
-import           Screepy.Fetcher
+import           Screepy.Fetch
 import           Screepy.Photo
 import           Screepy.Twitter
 import qualified Screepy.Twitter              as TW

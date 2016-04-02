@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Screepy.Fetcher
+module Screepy.Fetch
        ( fetchPhoto
        , fetchPhotos
        , FetcherError(..)) where
