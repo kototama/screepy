@@ -32,7 +32,7 @@ main = do
       case photosResp of
         Right resp -> do
           putStrLn . show $ resp
-          resp2 <- runErrorT . fetchPhotos $ photosUrls resp
+          resp2 <- runErrorT . fetchPhotos $ resp
           case resp2 of
             Right photos -> dumpPhotos photos directory
             Left _ -> error "error"
