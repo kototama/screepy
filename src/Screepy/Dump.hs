@@ -8,7 +8,8 @@ import           Data.Conduit
 import qualified Data.Conduit.Binary          as CB
 import qualified Data.Conduit.List            as CL
 import           Data.List.Split              (splitOn)
-
+import Data.Time.Format (formatTime)
+import System.Locale (defaultTimeLocale)
 
 data DumpError = HttpError String
 
@@ -16,10 +17,12 @@ instance Error DumpError where
   noMsg    = HttpError "HTTP error during dump!"
   strMsg s = HttpError s
 
-
 mkFilePath :: Photo -> FilePath -> FilePath
-mkFilePath photo directory = directory ++ "/" ++ photoName
-  where photoName = last $ splitOn "/" (url photo)
+mkFilePath photo directory = directory ++ "/" ++ formatedDate ++ "_" ++ photoName
+                   where date = (creationTime photo)
+                         photoName = last $ splitOn "/" (url photo)
+                         formatedDate = formatTime defaultTimeLocale "%Y-%m-%d-%T" date
+
 
 sinkPhotos :: FilePath -> Sink Photo (ResourceT IO) ()
 sinkPhotos directory = do
@@ -35,12 +38,6 @@ sinkPhotos directory = do
 dumpPhotos :: [Photo] -> FilePath -> IO ()
 dumpPhotos photos directory =
   runResourceT $ CL.sourceList photos $$ (sinkPhotos directory)
-
-
--- mkFilePath :: Photo -> FilePath
--- mkFilePath photo = formatedDate ++ "_" ++ (last $ splitOn "/" (url photo))
---                    where date = (creationTime photo)
---                          formatedDate = formatTime defaultTimeLocale "%Y-%m-%d-%T" date
 
 -- storePhotos :: Config -> [Photo] -> IO ()
 -- storePhotos config photos = do
